@@ -34,6 +34,7 @@ document.getElementById('checkinForm').addEventListener('submit', (e) => {
     const phoneField = document.getElementById('phone');
     const email = (emailField.dataset.realEmail || emailField.value).trim();
     const phone = (phoneField.dataset.realPhone || stripPhoneFormatting(phoneField.value));
+    const eventName = document.getElementById('event').value;
 
     // Validate email only if not using stored user
     if (!emailField.dataset.isStoredUser) {
@@ -54,6 +55,16 @@ document.getElementById('checkinForm').addEventListener('submit', (e) => {
         }
     }
 
+    // Check for duplicate check-in (same email and event)
+    const existingCheckin = getCheckins().find(c =>
+        c.email.toLowerCase() === email.toLowerCase() && c.event === eventName
+    );
+
+    if (existingCheckin) {
+        alert(`${email} is already checked into ${eventName}.`);
+        return;
+    }
+
     document.getElementById('emailError').classList.add('hidden');
 
     const checkin = {
@@ -61,7 +72,7 @@ document.getElementById('checkinForm').addEventListener('submit', (e) => {
         name: document.getElementById('name').value.trim(),
         phone: phone,
         email: email,
-        event: document.getElementById('event').value,
+        event: eventName,
         timestamp: new Date().toISOString()
     };
 
