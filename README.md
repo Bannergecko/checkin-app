@@ -40,7 +40,6 @@ The app stores data in localStorage with key `lathrop_checkins`. When ready to i
 
 ## Tech
 
-- HTML5 + JavaScript
-- Tailwind CSS (via CDN)
+- HTML5 + JavaScript + CSS
 - localStorage for persistence
 - No server required - runs entirely in browser
