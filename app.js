@@ -14,16 +14,7 @@ const ADMIN_CREDENTIALS = {
 let isAdminLoggedIn = false;
 
 // Default events
-const DEFAULT_EVENTS = [
-    'Business After Hours',
-    'Ribbon Cutting',
-    'Morning Mixer',
-    'Annual Banquet',
-    'Board Meeting',
-    'Networking Breakfast',
-    'Chamber 101',
-    'Other'
-];
+const DEFAULT_EVENTS = [];
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -583,7 +574,7 @@ document.getElementById('loginForm').addEventListener('submit', (e) => {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+    if (username.toLowerCase() === ADMIN_CREDENTIALS.username.toLowerCase() && password === ADMIN_CREDENTIALS.password) {
         isAdminLoggedIn = true;
         closeLoginModal();
         openAdmin();
