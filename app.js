@@ -296,10 +296,10 @@ async function loadRecentList() {
 
     list.innerHTML = data.map(c => {
         const date = new Date(c.timestamp);
-        return `<div class="border-b border-gray-100 py-2">
-            <div class="font-medium">${c.name}</div>
-            <div class="text-gray-500">${formatPhone(c.phone)} · ${c.email}</div>
-            <div class="text-gray-500">${c.event} · ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</div>
+        return `<div class="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+            <div class="font-medium text-gray-800">${c.name}</div>
+            <div class="text-sm text-gray-500 mt-1">${formatPhone(c.phone)} · ${c.email}</div>
+            <div class="text-sm text-gray-400 mt-1">${c.event} · ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</div>
         </div>`;
     }).join('');
 }
