@@ -16,13 +16,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('newEventDate').value = new Date().toLocaleDateString('en-CA');
 
+    await fetchPeople();
     await loadActiveEvent();
     await loadExportEventSelect();
     setupNameSearch();
     setupClearPerson();
 
     if (currentSession) {
-        await fetchPeople();
         openAdmin();
     }
 });
