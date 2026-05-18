@@ -1,5 +1,5 @@
-const APP_VERSION = '2.3.0';
-console.log(`GLCC Check-In v${APP_VERSION} | Supabase centralized | Loaded: ${new Date().toLocaleString()}`);
+const APP_VERSION = '2.4.0';
+console.log(`GLCC Check-In v${APP_VERSION} | Loaded: ${new Date().toLocaleString()}`);
 
 const SUPABASE_URL = 'https://iqloilzpgsgwhctgmikj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_nBMYllsXrBKyuvW_i61Lpw_N0vOT1BI';
@@ -7,12 +7,13 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentSession = null;
 let cachedPeople = [];
+let activeEventName = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await db.auth.getSession();
     currentSession = session;
 
-    await loadEventSelect();
+    await loadActiveEvent();
     await loadExportEventSelect();
     setupNameSearch();
     setupClearPerson();
@@ -27,11 +28,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 document.getElementById('checkinForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    if (!activeEventName) {
+        alert('No active event. An admin must set one first.');
+        return;
+    }
+
     const emailField = document.getElementById('email');
     const phoneField = document.getElementById('phone');
     const email = (emailField.dataset.realEmail || emailField.value).trim();
     const phone = (phoneField.dataset.realPhone || stripPhoneFormatting(phoneField.value));
-    const eventName = document.getElementById('event').value;
 
     if (!emailField.dataset.isStoredUser) {
         const validation = isValidEmail(email);
@@ -60,7 +65,7 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
         name: document.getElementById('name').value.trim(),
         phone,
         email,
-        event: eventName,
+        event: activeEventName,
         timestamp: new Date().toISOString()
     };
 
@@ -68,7 +73,7 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
 
     if (error) {
         if (error.code === '23505') {
-            alert(`${email} is already checked into ${eventName}.`);
+            alert(`${email} is already checked into ${activeEventName}.`);
         } else {
             alert('Check-in failed. Please try again.');
             console.error(error);
@@ -108,42 +113,53 @@ function resetForm() {
     delete phoneField.dataset.isStoredUser;
     document.getElementById('clearPerson').classList.add('hidden');
     document.getElementById('emailError').classList.add('hidden');
-    loadEventSelect();
+}
+
+// --- Active event ---
+
+async function loadActiveEvent() {
+    const { data } = await db.from('events').select('name').eq('is_active', true).maybeSingle();
+    activeEventName = data?.name || null;
+    updateActiveEventDisplay();
+}
+
+function updateActiveEventDisplay() {
+    const el = document.getElementById('activeEventName');
+    if (activeEventName) {
+        el.textContent = activeEventName;
+        el.classList.remove('text-gray-400');
+        el.classList.add('text-gray-800', 'font-medium');
+    } else {
+        el.textContent = 'No active event selected';
+        el.classList.add('text-gray-400');
+        el.classList.remove('text-gray-800', 'font-medium');
+    }
+}
+
+async function setActiveEvent(eventName) {
+    await db.from('events').update({ is_active: false }).not('id', 'is', null);
+    await db.from('events').update({ is_active: true }).eq('name', eventName);
+    activeEventName = eventName;
+    updateActiveEventDisplay();
+    await loadEventList();
 }
 
 // --- Event functions ---
 
 async function getEvents() {
-    const { data, error } = await db.from('events').select('name').order('created_at');
+    const { data, error } = await db.from('events').select('name, is_active').order('created_at');
     if (error) { console.error('getEvents:', error); return []; }
-    return data.map(row => row.name);
+    return data;
 }
 
 async function deleteEvent(eventName) {
     await db.from('events').delete().eq('name', eventName);
-    await loadEventSelect();
-    await loadExportEventSelect();
-    await loadEventList();
-}
-
-async function loadEventSelect() {
-    const select = document.getElementById('event');
-    const currentValue = select.value;
-    const events = await getEvents();
-
-    select.innerHTML = '<option value="">Select an event...</option>';
-    events.forEach(event => {
-        const option = document.createElement('option');
-        option.value = event;
-        option.textContent = event;
-        select.appendChild(option);
-    });
-
-    if (events.includes(currentValue)) {
-        select.value = currentValue;
-    } else if (events.length === 1) {
-        select.value = events[0];
+    if (activeEventName === eventName) {
+        activeEventName = null;
+        updateActiveEventDisplay();
     }
+    await loadEventList();
+    await loadExportEventSelect();
 }
 
 async function loadExportEventSelect() {
@@ -151,10 +167,10 @@ async function loadExportEventSelect() {
     const events = await getEvents();
 
     select.innerHTML = '<option value="">All Events</option>';
-    events.forEach(event => {
+    events.forEach(e => {
         const option = document.createElement('option');
-        option.value = event;
-        option.textContent = event;
+        option.value = e.name;
+        option.textContent = e.name;
         select.appendChild(option);
     });
 }
@@ -167,9 +183,8 @@ async function addEvent() {
     const { error } = await db.from('events').insert({ name: eventName });
     if (!error) {
         input.value = '';
-        await loadEventSelect();
-        await loadExportEventSelect();
         await loadEventList();
+        await loadExportEventSelect();
     }
 }
 
@@ -182,12 +197,20 @@ async function loadEventList() {
         return;
     }
 
-    list.innerHTML = events.map(event =>
-        `<div class="flex justify-between items-center py-1">
-            <span>${event}</span>
-            <button onclick="deleteEvent('${event}')" class="text-red-500 hover:text-red-700 text-xs">Remove</button>
-        </div>`
-    ).join('');
+    list.innerHTML = events.map(e => {
+        const isActive = e.is_active;
+        return `
+        <div class="flex items-center justify-between px-4 py-3 rounded-lg ${isActive ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-200'}">
+            <div class="flex items-center gap-3">
+                <span class="text-base ${isActive ? 'font-semibold text-indigo-700' : 'text-gray-700'}">${e.name}</span>
+                ${isActive ? '<span class="text-xs font-medium px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">Active</span>' : ''}
+            </div>
+            <div class="flex gap-2">
+                ${!isActive ? `<button onclick="setActiveEvent('${e.name}')" class="text-xs px-3 py-1.5 bg-white border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium">Set Active</button>` : ''}
+                <button onclick="deleteEvent('${e.name}')" class="text-xs px-3 py-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 font-medium">Remove</button>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 // --- People ---
@@ -233,31 +256,7 @@ async function loadRecentList() {
     }).join('');
 }
 
-// --- Exports ---
-
-async function exportJSON() {
-    const eventFilter = document.getElementById('exportEvent').value;
-    let query = db.from('checkins').select('name, phone, email, event, timestamp').order('timestamp');
-    if (eventFilter) query = query.eq('event', eventFilter);
-
-    const { data, error } = await query;
-    if (error || !data || data.length === 0) { alert('No data to export'); return; }
-
-    const checkinsByEvent = {};
-    data.forEach(c => {
-        if (!checkinsByEvent[c.event]) checkinsByEvent[c.event] = [];
-        checkinsByEvent[c.event].push(c);
-    });
-
-    Object.entries(checkinsByEvent).forEach(([eventName, eventCheckins]) => {
-        const dateStr = new Date().toISOString().split('T')[0];
-        downloadFile(
-            JSON.stringify(eventCheckins, null, 2),
-            `lathrop-checkins-${sanitizeFilename(eventName)}-${dateStr}.json`,
-            'application/json'
-        );
-    });
-}
+// --- Export ---
 
 async function exportCSV() {
     const eventFilter = document.getElementById('exportEvent').value;
@@ -285,15 +284,6 @@ async function exportCSV() {
     });
 }
 
-async function clearData() {
-    if (confirm('Are you sure you want to delete ALL check-in data? This cannot be undone.')) {
-        await db.from('checkins').delete().not('id', 'is', null);
-        await db.from('people').delete().not('id', 'is', null);
-        cachedPeople = [];
-        await updateStats();
-    }
-}
-
 // --- Auth ---
 
 function showLoginModal() {
@@ -308,8 +298,10 @@ function closeLoginModal() {
 }
 
 function openAdmin() {
+    document.getElementById('checkinCard').classList.add('hidden');
     document.getElementById('adminLoginBtn').classList.add('hidden');
     document.getElementById('adminCard').classList.remove('hidden');
+    document.getElementById('mainContainer').style.maxWidth = '56rem';
     updateStats();
     loadExportEventSelect();
 }
@@ -317,6 +309,8 @@ function openAdmin() {
 function closeAdmin() {
     document.getElementById('adminCard').classList.add('hidden');
     document.getElementById('adminLoginBtn').classList.remove('hidden');
+    document.getElementById('checkinCard').classList.remove('hidden');
+    document.getElementById('mainContainer').style.maxWidth = '';
 }
 
 async function logout() {
