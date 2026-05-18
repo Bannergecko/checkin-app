@@ -1,4 +1,4 @@
-const APP_VERSION = '2.1.2';
+const APP_VERSION = '2.2.0';
 console.log(`GLCC Check-In v${APP_VERSION} | Supabase centralized | Loaded: ${new Date().toLocaleString()}`);
 
 const SUPABASE_URL = 'https://iqloilzpgsgwhctgmikj.supabase.co';
@@ -11,12 +11,16 @@ let cachedPeople = [];
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await db.auth.getSession();
     currentSession = session;
-    if (currentSession) await fetchPeople();
 
     await loadEventSelect();
     await loadExportEventSelect();
     setupNameSearch();
     setupClearPerson();
+
+    if (currentSession) {
+        await fetchPeople();
+        openAdmin();
+    }
 });
 
 // Form submission
@@ -292,20 +296,20 @@ async function clearData() {
 
 // --- Auth ---
 
-async function tryOpenAdmin() {
-    const { data: { session } } = await db.auth.getSession();
-    currentSession = session;
-    if (currentSession) {
-        if (cachedPeople.length === 0) await fetchPeople();
-        openAdmin();
+function updateLoginBtn(loggedIn) {
+    const btn = document.getElementById('loginBtn');
+    if (loggedIn) {
+        btn.textContent = 'Logout';
+        btn.onclick = logout;
     } else {
-        showLoginModal();
+        btn.textContent = 'Login';
+        btn.onclick = showLoginModal;
     }
 }
 
 function showLoginModal() {
     document.getElementById('loginModal').classList.remove('hidden');
-    document.getElementById('loginEmail').focus();
+    document.getElementById('username').focus();
 }
 
 function closeLoginModal() {
@@ -315,13 +319,15 @@ function closeLoginModal() {
 }
 
 function openAdmin() {
-    document.getElementById('adminContent').classList.remove('hidden');
+    document.getElementById('adminCard').classList.remove('hidden');
+    updateLoginBtn(true);
     updateStats();
     loadExportEventSelect();
 }
 
 function closeAdmin() {
-    document.getElementById('adminContent').classList.add('hidden');
+    document.getElementById('adminCard').classList.add('hidden');
+    updateLoginBtn(false);
 }
 
 async function logout() {
@@ -334,7 +340,7 @@ async function logout() {
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const email = document.getElementById('loginEmail').value;
+    const email = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     const loginBtn = e.target.querySelector('button[type="submit"]');
 
