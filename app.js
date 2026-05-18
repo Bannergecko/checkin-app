@@ -1,4 +1,4 @@
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.1.1';
 console.log(`GLCC Check-In v${APP_VERSION} | Supabase centralized | Loaded: ${new Date().toLocaleString()}`);
 
 const SUPABASE_URL = 'https://iqloilzpgsgwhctgmikj.supabase.co';
@@ -305,7 +305,7 @@ async function tryOpenAdmin() {
 
 function showLoginModal() {
     document.getElementById('loginModal').classList.remove('hidden');
-    document.getElementById('loginEmail').focus();
+    document.getElementById('username').focus();
 }
 
 function closeLoginModal() {
@@ -334,7 +334,7 @@ async function logout() {
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const email = document.getElementById('loginEmail').value;
+    const email = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     const loginBtn = e.target.querySelector('button[type="submit"]');
 
