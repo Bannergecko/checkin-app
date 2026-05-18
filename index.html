@@ -18,12 +18,7 @@
 <body class="min-h-screen" style="background-color: #bcb2c4;">
     <div class="max-w-lg mx-auto px-4 py-8">
         <!-- Header -->
-        <header class="text-center mb-8 relative">
-            <button id="loginBtn" onclick="showLoginModal()"
-                class="absolute top-0 right-0 px-4 py-2 text-sm font-semibold rounded-lg text-white"
-                style="background-color: #473243;">
-                Login
-            </button>
+        <header class="text-center mb-8">
             <img src="glcc-primary-logo.png" alt="Greater Lathrop Chamber of Commerce" class="h-40 mx-auto mb-3">
             <p class="text-black text-2xl font-bold">Member Check-In</p>
         </header>
@@ -75,7 +70,15 @@
             <p class="font-semibold">Check-in successful!</p>
         </div>
 
-        <!-- Admin Section (hidden until logged in) -->
+        <!-- Admin Login Button (shown when logged out) -->
+        <div id="adminLoginBtn" class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <button onclick="showLoginModal()"
+                class="w-full px-6 py-4 cursor-pointer hover:bg-gray-50 font-semibold text-gray-700 text-left">
+                Admin &amp; Data
+            </button>
+        </div>
+
+        <!-- Admin Section (shown when logged in) -->
         <div id="adminCard" class="hidden bg-white rounded-2xl shadow-lg overflow-hidden">
             <div class="px-6 py-6 space-y-4">
 
@@ -129,6 +132,12 @@
                     <summary class="cursor-pointer text-indigo-600 hover:text-indigo-700">View recent check-ins</summary>
                     <div id="recentList" class="mt-3 max-h-48 overflow-y-auto text-xs text-gray-600 space-y-1"></div>
                 </details>
+
+                <!-- Logout -->
+                <button onclick="logout()"
+                    class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
+                    Logout
+                </button>
 
             </div>
         </div>
