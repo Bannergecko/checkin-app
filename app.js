@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await db.auth.getSession();
     currentSession = session;
 
+    document.getElementById('newEventDate').value = new Date().toLocaleDateString('en-CA');
+
     await loadActiveEvent();
     await loadExportEventSelect();
     setupNameSearch();
@@ -198,7 +200,7 @@ async function addEvent() {
     const { error } = await db.from('events').insert({ name: eventName, event_date: eventDate });
     if (!error) {
         input.value = '';
-        dateInput.value = '';
+        dateInput.value = new Date().toLocaleDateString('en-CA');
         await loadEventList();
         await loadExportEventSelect();
     }
