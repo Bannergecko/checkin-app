@@ -83,10 +83,13 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
         return;
     }
 
-    await db.from('people').upsert(
-        { name: checkin.name, phone: checkin.phone, email: checkin.email, last_seen: checkin.timestamp },
-        { onConflict: 'email' }
-    );
+    const { error: personError } = await db.rpc('upsert_person', {
+        p_name: checkin.name,
+        p_phone: checkin.phone,
+        p_email: checkin.email,
+        p_last_seen: checkin.timestamp
+    });
+    if (personError) console.error('Person upsert error:', personError);
 
     const idx = cachedPeople.findIndex(p => p.email === checkin.email);
     if (idx >= 0) {
@@ -238,7 +241,7 @@ async function updateStats() {
 async function loadRecentList() {
     const list = document.getElementById('recentList');
     const { data } = await db.from('checkins')
-        .select('name, phone, event, timestamp')
+        .select('name, phone, email, event, timestamp')
         .order('timestamp', { ascending: false })
         .limit(10);
 
@@ -251,7 +254,8 @@ async function loadRecentList() {
         const date = new Date(c.timestamp);
         return `<div class="border-b border-gray-100 py-2">
             <div class="font-medium">${c.name}</div>
-            <div class="text-gray-500">${formatPhone(c.phone)} · ${c.event} - ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</div>
+            <div class="text-gray-500">${formatPhone(c.phone)} · ${c.email}</div>
+            <div class="text-gray-500">${c.event} · ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</div>
         </div>`;
     }).join('');
 }
