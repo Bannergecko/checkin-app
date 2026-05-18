@@ -1,9 +1,13 @@
-// Storage keys
+// Storage keys (events now live in Supabase; check-ins and people stay local)
 const STORAGE_KEYS = {
     CHECKINS: 'lathrop_checkins',
-    EVENTS: 'lathrop_events',
     PEOPLE: 'lathrop_people'
 };
+
+// Supabase client
+const SUPABASE_URL = 'https://iqloilzpgsgwhctgmikj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_nBMYllsXrBKyuvW_i61Lpw_N0vOT1BI';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Login credentials
 const ADMIN_CREDENTIALS = {
@@ -13,14 +17,10 @@ const ADMIN_CREDENTIALS = {
 
 let isAdminLoggedIn = false;
 
-// Default events
-const DEFAULT_EVENTS = [];
-
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    initializeEvents();
-    loadEventSelect();
-    loadExportEventSelect();
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadEventSelect();
+    await loadExportEventSelect();
     updateStats();
     setupNameSearch();
     setupClearPerson();
@@ -36,7 +36,6 @@ document.getElementById('checkinForm').addEventListener('submit', (e) => {
     const phone = (phoneField.dataset.realPhone || stripPhoneFormatting(phoneField.value));
     const eventName = document.getElementById('event').value;
 
-    // Validate email only if not using stored user
     if (!emailField.dataset.isStoredUser) {
         const validation = isValidEmail(email);
         if (!validation.valid) {
@@ -46,7 +45,6 @@ document.getElementById('checkinForm').addEventListener('submit', (e) => {
         }
     }
 
-    // Validate phone only if not using stored user
     if (!phoneField.dataset.isStoredUser) {
         const cleaned = phone.replace(/\D/g, '');
         if (cleaned.length !== 10) {
@@ -55,7 +53,6 @@ document.getElementById('checkinForm').addEventListener('submit', (e) => {
         }
     }
 
-    // Check for duplicate check-in (same email and event)
     const existingCheckin = getCheckins().find(c =>
         c.email.toLowerCase() === email.toLowerCase() && c.event === eventName
     );
@@ -93,53 +90,36 @@ function resetForm() {
     delete phoneField.dataset.isStoredUser;
     document.getElementById('clearPerson').classList.add('hidden');
     document.getElementById('emailError').classList.add('hidden');
-    // Re-auto-select if only one event
-    autoSelectSingleEvent();
-}
-
-function initializeEvents() {
-    let events = getEvents();
-    if (events.length === 0) {
-        localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(DEFAULT_EVENTS));
-    }
-}
-
-function getEvents() {
-    const data = localStorage.getItem(STORAGE_KEYS.EVENTS);
-    return data ? JSON.parse(data) : [];
-}
-
-function saveEvent(eventName) {
-    const events = getEvents();
-    if (!events.includes(eventName)) {
-        events.push(eventName);
-        localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(events));
-        return true;
-    }
-    return false;
-}
-
-function deleteEvent(eventName) {
-    let events = getEvents();
-    events = events.filter(e => e !== eventName);
-    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(events));
     loadEventSelect();
-    loadExportEventSelect();
-    loadEventList();
 }
 
-function autoSelectSingleEvent() {
-    const events = getEvents();
-    const select = document.getElementById('event');
-    if (events.length === 1) {
-        select.value = events[0];
-    }
+// --- Event functions (Supabase) ---
+
+async function getEvents() {
+    const { data, error } = await db
+        .from('events')
+        .select('name')
+        .order('created_at');
+    if (error) { console.error('getEvents:', error); return []; }
+    return data.map(row => row.name);
 }
 
-function loadEventSelect() {
+async function saveEvent(eventName) {
+    const { error } = await db.from('events').insert({ name: eventName });
+    return !error;
+}
+
+async function deleteEvent(eventName) {
+    await db.from('events').delete().eq('name', eventName);
+    await loadEventSelect();
+    await loadExportEventSelect();
+    await loadEventList();
+}
+
+async function loadEventSelect() {
     const select = document.getElementById('event');
     const currentValue = select.value;
-    const events = getEvents();
+    const events = await getEvents();
 
     select.innerHTML = '<option value="">Select an event...</option>';
     events.forEach(event => {
@@ -151,14 +131,14 @@ function loadEventSelect() {
 
     if (events.includes(currentValue)) {
         select.value = currentValue;
-    } else {
-        autoSelectSingleEvent();
+    } else if (events.length === 1) {
+        select.value = events[0];
     }
 }
 
-function loadExportEventSelect() {
+async function loadExportEventSelect() {
     const select = document.getElementById('exportEvent');
-    const events = getEvents();
+    const events = await getEvents();
 
     select.innerHTML = '<option value="">All Events</option>';
     events.forEach(event => {
@@ -169,21 +149,21 @@ function loadExportEventSelect() {
     });
 }
 
-function addEvent() {
+async function addEvent() {
     const input = document.getElementById('newEvent');
     const eventName = input.value.trim();
 
-    if (eventName && saveEvent(eventName)) {
+    if (eventName && await saveEvent(eventName)) {
         input.value = '';
-        loadEventSelect();
-        loadExportEventSelect();
-        loadEventList();
+        await loadEventSelect();
+        await loadExportEventSelect();
+        await loadEventList();
     }
 }
 
-function loadEventList() {
+async function loadEventList() {
     const list = document.getElementById('eventList');
-    const events = getEvents();
+    const events = await getEvents();
 
     if (events.length === 0) {
         list.innerHTML = '<p class="text-gray-400">No events configured</p>';
@@ -198,6 +178,8 @@ function loadEventList() {
     ).join('');
 }
 
+// --- Check-in functions (localStorage) ---
+
 function getCheckins() {
     const data = localStorage.getItem(STORAGE_KEYS.CHECKINS);
     return data ? JSON.parse(data) : [];
@@ -209,7 +191,6 @@ function saveCheckin(checkin) {
     localStorage.setItem(STORAGE_KEYS.CHECKINS, JSON.stringify(checkins));
 }
 
-// People database functions
 function getPeople() {
     const data = localStorage.getItem(STORAGE_KEYS.PEOPLE);
     return data ? JSON.parse(data) : [];
@@ -220,7 +201,6 @@ function saveOrUpdatePerson(checkin) {
     const existingIndex = people.findIndex(p => p.email === checkin.email);
 
     if (existingIndex >= 0) {
-        // Update existing person
         people[existingIndex] = {
             ...people[existingIndex],
             name: checkin.name,
@@ -229,7 +209,6 @@ function saveOrUpdatePerson(checkin) {
             checkinCount: (people[existingIndex].checkinCount || 1) + 1
         };
     } else {
-        // Add new person
         people.push({
             email: checkin.email,
             name: checkin.name,
@@ -243,29 +222,24 @@ function saveOrUpdatePerson(checkin) {
     localStorage.setItem(STORAGE_KEYS.PEOPLE, JSON.stringify(people));
 }
 
-// Better email validation
 function isValidEmail(email) {
     if (!email || email.length === 0) {
         return { valid: false, error: 'Email is required' };
     }
 
-    // Check for basic format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
         return { valid: false, error: 'Please enter a valid email address (e.g., name@example.com)' };
     }
 
-    // Check for obfuscation patterns (should not have ... in manually entered emails)
     if (email.includes('...')) {
         return { valid: false, error: 'Please enter a complete email address' };
     }
 
-    // Check for multiple @ signs
     if ((email.match(/@/g) || []).length > 1) {
         return { valid: false, error: 'Email can only contain one @ symbol' };
     }
 
-    // Check that domain part has valid structure
     const [, domain] = email.split('@');
     if (!domain || !domain.includes('.') || domain.split('.')[1]?.length < 2) {
         return { valid: false, error: 'Please enter a valid email domain' };
@@ -307,7 +281,6 @@ function setupNameSearch() {
 
         suggestionsBox.classList.remove('hidden');
 
-        // Add click handlers
         suggestionsBox.querySelectorAll('.suggestion-item').forEach(item => {
             item.addEventListener('click', () => {
                 const emailField = document.getElementById('email');
@@ -317,7 +290,6 @@ function setupNameSearch() {
                 phoneField.dataset.realPhone = item.dataset.phone;
                 phoneField.dataset.isStoredUser = 'true';
                 emailField.value = item.dataset.obfuscated;
-                // Store real email separately for submission
                 emailField.dataset.realEmail = item.dataset.email;
                 emailField.dataset.isStoredUser = 'true';
                 document.getElementById('clearPerson').classList.remove('hidden');
@@ -327,7 +299,6 @@ function setupNameSearch() {
         });
     });
 
-    // Hide suggestions when clicking outside
     document.addEventListener('click', (e) => {
         if (!nameInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
             suggestionsBox.classList.add('hidden');
@@ -350,7 +321,6 @@ function setupClearPerson() {
         document.getElementById('emailError').classList.add('hidden');
     });
 
-    // Clear stored user flag when manually editing email
     document.getElementById('email').addEventListener('input', () => {
         const emailField = document.getElementById('email');
         if (emailField.dataset.isStoredUser) {
@@ -360,17 +330,14 @@ function setupClearPerson() {
         }
     });
 
-    // Clear stored user flag when manually editing phone and format as user types
     document.getElementById('phone').addEventListener('input', (e) => {
         const phoneField = e.target;
 
-        // Clear stored user flag if editing stored phone
         if (phoneField.dataset.isStoredUser) {
             delete phoneField.dataset.isStoredUser;
             delete phoneField.dataset.realPhone;
         }
 
-        // Only format if not stored user (manual entry)
         if (!phoneField.dataset.isStoredUser) {
             const input = phoneField.value.replace(/\D/g, '');
             let formatted = '';
@@ -415,25 +382,19 @@ function obfuscateEmail(email) {
     const [local, domain] = email.split('@');
     const localPrefix = local.length >= 3 ? local.slice(0, 3) : local;
 
-    // Split domain into parts (e.g., ['bannergecko', 'com'])
     const domainParts = domain.split('.');
-    const tld = domainParts[domainParts.length - 1]; // 'com'
-    const mainDomain = domainParts.slice(0, -1).join('.'); // 'bannergecko'
-    const domainSuffix = mainDomain.length >= 3 ? mainDomain.slice(-3) : mainDomain; // 'cko'
+    const tld = domainParts[domainParts.length - 1];
+    const mainDomain = domainParts.slice(0, -1).join('.');
+    const domainSuffix = mainDomain.length >= 3 ? mainDomain.slice(-3) : mainDomain;
 
     return `${localPrefix}...@...${domainSuffix}.${tld}`;
 }
 
 function formatPhone(phone) {
-    // Strip all non-numeric characters
     const cleaned = phone.replace(/\D/g, '');
-
-    // Check if we have 10 digits
     if (cleaned.length === 10) {
         return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
     }
-
-    // Return original if not 10 digits
     return phone;
 }
 
@@ -450,80 +411,46 @@ function sanitizeFilename(name) {
 function exportJSON() {
     const eventFilter = document.getElementById('exportEvent').value;
     const checkins = getCheckins();
-    const events = getEvents();
 
-    // Group checkins by event
     const checkinsByEvent = {};
     checkins.forEach(c => {
         if (!eventFilter || c.event === eventFilter) {
-            if (!checkinsByEvent[c.event]) {
-                checkinsByEvent[c.event] = [];
-            }
+            if (!checkinsByEvent[c.event]) checkinsByEvent[c.event] = [];
             checkinsByEvent[c.event].push(c);
         }
     });
 
-    if (Object.keys(checkinsByEvent).length === 0) {
-        alert('No data to export');
-        return;
-    }
+    if (Object.keys(checkinsByEvent).length === 0) { alert('No data to export'); return; }
 
-    // Export each event as a separate file
     Object.entries(checkinsByEvent).forEach(([eventName, eventCheckins]) => {
-        const eventSlug = sanitizeFilename(eventName);
         const dateStr = new Date().toISOString().split('T')[0];
-        const filename = `lathrop-checkins-${eventSlug}-${dateStr}.json`;
-
-        const data = JSON.stringify(eventCheckins, null, 2);
-        downloadFile(data, filename, 'application/json');
+        downloadFile(JSON.stringify(eventCheckins, null, 2), `lathrop-checkins-${sanitizeFilename(eventName)}-${dateStr}.json`, 'application/json');
     });
 }
 
 function exportCSV() {
     const eventFilter = document.getElementById('exportEvent').value;
     const checkins = getCheckins();
-    const events = getEvents();
 
-    // Group checkins by event
     const checkinsByEvent = {};
     checkins.forEach(c => {
         if (!eventFilter || c.event === eventFilter) {
-            if (!checkinsByEvent[c.event]) {
-                checkinsByEvent[c.event] = [];
-            }
+            if (!checkinsByEvent[c.event]) checkinsByEvent[c.event] = [];
             checkinsByEvent[c.event].push(c);
         }
     });
 
-    if (Object.keys(checkinsByEvent).length === 0) {
-        alert('No data to export');
-        return;
-    }
+    if (Object.keys(checkinsByEvent).length === 0) { alert('No data to export'); return; }
 
-    // Export each event as a separate file
     Object.entries(checkinsByEvent).forEach(([eventName, eventCheckins]) => {
-        const eventSlug = sanitizeFilename(eventName);
         const dateStr = new Date().toISOString().split('T')[0];
-        const filename = `lathrop-checkins-${eventSlug}-${dateStr}.csv`;
-
         const headers = ['Name', 'Phone', 'Email', 'Event', 'Date', 'Time'];
         const rows = eventCheckins.map(c => {
             const date = new Date(c.timestamp);
-            return [
-                c.name,
-                formatPhone(c.phone),
-                c.email,
-                c.event,
-                date.toLocaleDateString(),
-                date.toLocaleTimeString()
-            ];
+            return [c.name, formatPhone(c.phone), c.email, c.event, date.toLocaleDateString(), date.toLocaleTimeString()];
         });
-
-        const csv = [headers, ...rows]
-            .map(row => row.map(cell => `"${cell}"`).join(','))
-            .join('\n');
-
-        downloadFile(csv, filename, 'text/csv');
+        const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+        downloadFile(csv, `lathrop-checkins-${sanitizeFilename(eventName)}-${dateStr}.csv`, 'text/csv');
     });
 }
 
@@ -545,7 +472,6 @@ function clearData() {
     }
 }
 
-// Admin login functions
 function tryOpenAdmin() {
     if (isAdminLoggedIn) {
         openAdmin();
@@ -578,7 +504,6 @@ function logout() {
     closeAdmin();
 }
 
-// Login form submission
 document.getElementById('loginForm').addEventListener('submit', (e) => {
     e.preventDefault();
 
