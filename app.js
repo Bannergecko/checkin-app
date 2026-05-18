@@ -1,3 +1,6 @@
+const APP_VERSION = '2.1.0';
+console.log(`GLCC Check-In v${APP_VERSION} | Supabase centralized | Loaded: ${new Date().toLocaleString()}`);
+
 const SUPABASE_URL = 'https://iqloilzpgsgwhctgmikj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_nBMYllsXrBKyuvW_i61Lpw_N0vOT1BI';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
