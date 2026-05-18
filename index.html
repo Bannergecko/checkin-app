@@ -18,7 +18,12 @@
 <body class="min-h-screen" style="background-color: #bcb2c4;">
     <div class="max-w-lg mx-auto px-4 py-8">
         <!-- Header -->
-        <header class="text-center mb-8">
+        <header class="text-center mb-8 relative">
+            <button id="loginBtn" onclick="showLoginModal()"
+                class="absolute top-0 right-0 px-4 py-2 text-sm font-semibold rounded-lg text-white"
+                style="background-color: #473243;">
+                Login
+            </button>
             <img src="glcc-primary-logo.png" alt="Greater Lathrop Chamber of Commerce" class="h-40 mx-auto mb-3">
             <p class="text-black text-2xl font-bold">Member Check-In</p>
         </header>
@@ -70,14 +75,9 @@
             <p class="font-semibold">Check-in successful!</p>
         </div>
 
-        <!-- Admin Section -->
-        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <button onclick="tryOpenAdmin()"
-                class="w-full px-6 py-4 cursor-pointer hover:bg-gray-50 font-semibold text-gray-700 text-left">
-                Admin & Data
-            </button>
-            <div id="adminContent" class="hidden px-6 pb-6 space-y-4 border-t border-gray-200 relative" style="padding-top: 32px;">
-                <button onclick="closeAdmin()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 font-bold text-lg">&times;</button>
+        <!-- Admin Section (hidden until logged in) -->
+        <div id="adminCard" class="hidden bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div class="px-6 py-6 space-y-4">
 
                 <!-- Event Management -->
                 <div>
@@ -130,11 +130,6 @@
                     <div id="recentList" class="mt-3 max-h-48 overflow-y-auto text-xs text-gray-600 space-y-1"></div>
                 </details>
 
-                <!-- Logout -->
-                <button onclick="logout()"
-                    class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
-                    Logout
-                </button>
             </div>
         </div>
 
