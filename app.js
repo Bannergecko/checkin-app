@@ -1,4 +1,4 @@
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.3.0';
 console.log(`GLCC Check-In v${APP_VERSION} | Supabase centralized | Loaded: ${new Date().toLocaleString()}`);
 
 const SUPABASE_URL = 'https://iqloilzpgsgwhctgmikj.supabase.co';
@@ -296,17 +296,6 @@ async function clearData() {
 
 // --- Auth ---
 
-function updateLoginBtn(loggedIn) {
-    const btn = document.getElementById('loginBtn');
-    if (loggedIn) {
-        btn.textContent = 'Logout';
-        btn.onclick = logout;
-    } else {
-        btn.textContent = 'Login';
-        btn.onclick = showLoginModal;
-    }
-}
-
 function showLoginModal() {
     document.getElementById('loginModal').classList.remove('hidden');
     document.getElementById('username').focus();
@@ -319,15 +308,15 @@ function closeLoginModal() {
 }
 
 function openAdmin() {
+    document.getElementById('adminLoginBtn').classList.add('hidden');
     document.getElementById('adminCard').classList.remove('hidden');
-    updateLoginBtn(true);
     updateStats();
     loadExportEventSelect();
 }
 
 function closeAdmin() {
     document.getElementById('adminCard').classList.add('hidden');
-    updateLoginBtn(false);
+    document.getElementById('adminLoginBtn').classList.remove('hidden');
 }
 
 async function logout() {
