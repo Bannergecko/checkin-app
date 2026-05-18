@@ -273,3 +273,20 @@ summary::-webkit-details-marker {
 
 /* Transitions */
 .transition-colors { transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease; }
+
+/* Width */
+.w-auto { width: auto; }
+
+/* Indigo backgrounds */
+.bg-indigo-600 { background-color: #4f46e5; }
+.bg-indigo-700 { background-color: #4338ca; }
+
+/* Indigo hover */
+.hover\:bg-indigo-700:hover { background-color: #4338ca; }
+
+/* Small input override for inline admin fields */
+.input-sm {
+    font-size: 14px !important;
+    padding: 6px 12px !important;
+    width: auto;
+}
