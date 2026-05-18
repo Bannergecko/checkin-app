@@ -16,7 +16,7 @@
     </style>
 </head>
 <body class="min-h-screen" style="background-color: #bcb2c4;">
-    <div class="max-w-lg mx-auto px-4 py-8">
+    <div id="mainContainer" class="max-w-lg mx-auto px-4 py-8">
         <!-- Header -->
         <header class="text-center mb-8">
             <img src="glcc-primary-logo.png" alt="Greater Lathrop Chamber of Commerce" class="h-40 mx-auto mb-3">
@@ -24,7 +24,7 @@
         </header>
 
         <!-- Check-in Form -->
-        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6" style="padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08);">
+        <div id="checkinCard" class="bg-white rounded-2xl shadow-xl mb-6" style="padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08);">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">New Check-In</h2>
             <form id="checkinForm" class="space-y-4">
                 <div class="relative">
@@ -51,11 +51,11 @@
                     Clear person info
                 </button>
                 <div>
-                    <label for="event" class="block text-sm font-medium text-gray-700 mb-1">Event *</label>
-                    <select id="event" required
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg bg-white">
-                        <option value="">Select an event...</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Event</label>
+                    <div id="activeEventName"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-lg text-gray-400">
+                        No active event selected
+                    </div>
                 </div>
                 <button type="submit"
                     class="w-full text-white py-4 rounded-lg font-semibold text-lg transition-colors"
@@ -79,13 +79,13 @@
         </div>
 
         <!-- Admin Section (shown when logged in) -->
-        <div id="adminCard" class="hidden bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div class="px-6 py-6 space-y-4">
+        <div id="adminCard" class="hidden bg-white rounded-2xl shadow-lg">
+            <div class="p-8 space-y-6">
 
                 <!-- Event Management -->
                 <div>
-                    <h3 class="font-medium text-gray-800 mb-2">Manage Events</h3>
-                    <div class="flex gap-2 mb-2">
+                    <h3 class="font-semibold text-gray-800 text-lg mb-3">Events</h3>
+                    <div class="flex gap-2 mb-4">
                         <input type="text" id="newEvent" placeholder="New event name"
                             class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
                         <button onclick="addEvent()"
@@ -93,45 +93,39 @@
                             Add
                         </button>
                     </div>
-                    <div id="eventList" class="text-sm text-gray-600"></div>
+                    <div id="eventList" class="space-y-2 text-sm text-gray-600"></div>
                 </div>
 
                 <hr class="border-gray-200">
 
-                <!-- Export Buttons -->
-                <h3 class="font-medium text-gray-800">Export Data</h3>
-                <div class="mb-2">
-                    <label for="exportEvent" class="block text-sm text-gray-600 mb-1">Filter by event:</label>
-                    <select id="exportEvent"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                        <option value="">All Events</option>
-                    </select>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="exportJSON()"
-                        class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-                        Export JSON
-                    </button>
+                <!-- Export -->
+                <div>
+                    <h3 class="font-semibold text-gray-800 text-lg mb-3">Export Check-Ins</h3>
+                    <div class="mb-3">
+                        <label for="exportEvent" class="block text-sm text-gray-600 mb-1">Filter by event:</label>
+                        <select id="exportEvent"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                            <option value="">All Events</option>
+                        </select>
+                    </div>
                     <button onclick="exportCSV()"
-                        class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
                         Export CSV
                     </button>
                 </div>
 
-                <!-- Data Count -->
-                <p id="recordCount" class="text-sm text-gray-500">Total check-ins: 0</p>
+                <hr class="border-gray-200">
 
-                <!-- Clear Data -->
-                <button onclick="clearData()"
-                    class="w-full px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium">
-                    Clear All Data
-                </button>
+                <!-- Stats & Recent -->
+                <div>
+                    <p id="recordCount" class="text-sm text-gray-500 mb-3">Total check-ins: 0</p>
+                    <details class="text-sm">
+                        <summary class="cursor-pointer text-indigo-600 hover:text-indigo-700">View recent check-ins</summary>
+                        <div id="recentList" class="mt-3 max-h-64 overflow-y-auto text-xs text-gray-600 space-y-1"></div>
+                    </details>
+                </div>
 
-                <!-- View Recent -->
-                <details class="text-sm">
-                    <summary class="cursor-pointer text-indigo-600 hover:text-indigo-700">View recent check-ins</summary>
-                    <div id="recentList" class="mt-3 max-h-48 overflow-y-auto text-xs text-gray-600 space-y-1"></div>
-                </details>
+                <hr class="border-gray-200">
 
                 <!-- Logout -->
                 <button onclick="logout()"
@@ -159,7 +153,7 @@
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                             placeholder="Enter password">
                     </div>
-                    <p id="loginError" class="hidden text-red-600 text-sm">Invalid username or password</p>
+                    <p id="loginError" class="hidden text-red-600 text-sm">Invalid email or password</p>
                     <div class="flex gap-2">
                         <button type="submit"
                             class="flex-1 text-white py-3 rounded-lg font-semibold transition-colors"
