@@ -1,4 +1,4 @@
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.5.0';
 console.log(`GLCC Check-In v${APP_VERSION} | Loaded: ${new Date().toLocaleString()}`);
 
 const SUPABASE_URL = 'https://iqloilzpgsgwhctgmikj.supabase.co';
@@ -8,6 +8,7 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentSession = null;
 let cachedPeople = [];
 let activeEventName = null;
+let activeEventDate = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await db.auth.getSession();
@@ -121,15 +122,17 @@ function resetForm() {
 // --- Active event ---
 
 async function loadActiveEvent() {
-    const { data } = await db.from('events').select('name').eq('is_active', true).maybeSingle();
+    const { data } = await db.from('events').select('name, event_date').eq('is_active', true).maybeSingle();
     activeEventName = data?.name || null;
+    activeEventDate = data?.event_date || null;
     updateActiveEventDisplay();
 }
 
 function updateActiveEventDisplay() {
     const el = document.getElementById('activeEventName');
     if (activeEventName) {
-        el.textContent = activeEventName;
+        const dateStr = activeEventDate ? ` · ${formatEventDate(activeEventDate)}` : '';
+        el.textContent = activeEventName + dateStr;
         el.classList.remove('text-gray-400');
         el.classList.add('text-gray-800', 'font-medium');
     } else {
@@ -139,18 +142,25 @@ function updateActiveEventDisplay() {
     }
 }
 
-async function setActiveEvent(eventName) {
+async function setActiveEvent(eventName, eventDate) {
     await db.from('events').update({ is_active: false }).not('id', 'is', null);
     await db.from('events').update({ is_active: true }).eq('name', eventName);
     activeEventName = eventName;
+    activeEventDate = eventDate || null;
     updateActiveEventDisplay();
     await loadEventList();
+}
+
+function formatEventDate(dateStr) {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 // --- Event functions ---
 
 async function getEvents() {
-    const { data, error } = await db.from('events').select('name, is_active').order('created_at');
+    const { data, error } = await db.from('events').select('name, event_date, is_active').order('created_at');
     if (error) { console.error('getEvents:', error); return []; }
     return data;
 }
@@ -180,12 +190,15 @@ async function loadExportEventSelect() {
 
 async function addEvent() {
     const input = document.getElementById('newEvent');
+    const dateInput = document.getElementById('newEventDate');
     const eventName = input.value.trim();
+    const eventDate = dateInput.value || null;
     if (!eventName) return;
 
-    const { error } = await db.from('events').insert({ name: eventName });
+    const { error } = await db.from('events').insert({ name: eventName, event_date: eventDate });
     if (!error) {
         input.value = '';
+        dateInput.value = '';
         await loadEventList();
         await loadExportEventSelect();
     }
@@ -200,20 +213,51 @@ async function loadEventList() {
         return;
     }
 
-    list.innerHTML = events.map(e => {
+    list.innerHTML = events.map((e, i) => {
         const isActive = e.is_active;
+        const dateDisplay = e.event_date ? `<span class="text-xs text-gray-500 ml-2">${formatEventDate(e.event_date)}</span>` : '';
         return `
-        <div class="flex items-center justify-between px-4 py-3 rounded-lg ${isActive ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-200'}">
+        <div id="event-row-${i}" class="flex items-center justify-between px-4 py-3 rounded-lg ${isActive ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-200'}">
             <div class="flex items-center gap-3">
                 <span class="text-base ${isActive ? 'font-semibold text-indigo-700' : 'text-gray-700'}">${e.name}</span>
+                ${dateDisplay}
                 ${isActive ? '<span class="text-xs font-medium px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">Active</span>' : ''}
             </div>
             <div class="flex gap-2">
-                ${!isActive ? `<button onclick="setActiveEvent('${e.name}')" class="text-xs px-3 py-1.5 bg-white border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium">Set Active</button>` : ''}
+                ${!isActive ? `<button onclick="setActiveEvent('${e.name}', '${e.event_date || ''}')" class="text-xs px-3 py-1.5 bg-white border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium">Set Active</button>` : ''}
+                <button onclick="showEditEvent(${i}, '${e.name}', '${e.event_date || ''}')" class="text-xs px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 font-medium">Edit</button>
                 <button onclick="deleteEvent('${e.name}')" class="text-xs px-3 py-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 font-medium">Remove</button>
             </div>
         </div>`;
     }).join('');
+}
+
+function showEditEvent(i, name, date) {
+    const row = document.getElementById(`event-row-${i}`);
+    row.className = 'flex items-center gap-2 px-4 py-3 rounded-lg bg-white border border-indigo-300';
+    row.innerHTML = `
+        <input type="text" id="edit-name-${i}" value="${name}" class="input-sm flex-1 px-3 py-1.5 border border-gray-300 rounded-lg">
+        <input type="date" id="edit-date-${i}" value="${date}" class="input-sm w-auto px-3 py-1.5 border border-gray-300 rounded-lg">
+        <button onclick="saveEventEdit('${name}', ${i})" class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Save</button>
+        <button onclick="loadEventList()" class="text-xs px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>`;
+}
+
+async function saveEventEdit(oldName, i) {
+    const newName = document.getElementById(`edit-name-${i}`).value.trim();
+    const newDate = document.getElementById(`edit-date-${i}`).value || null;
+    if (!newName) return;
+
+    const { error } = await db.from('events').update({ name: newName, event_date: newDate }).eq('name', oldName);
+    if (error) { console.error('Edit event error:', error); return; }
+
+    if (activeEventName === oldName) {
+        activeEventName = newName;
+        activeEventDate = newDate;
+        updateActiveEventDisplay();
+    }
+
+    await loadEventList();
+    await loadExportEventSelect();
 }
 
 // --- People ---
