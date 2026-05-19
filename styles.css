@@ -290,3 +290,42 @@ summary::-webkit-details-marker {
     padding: 6px 12px !important;
     width: auto;
 }
+
+/* Admin layout */
+.admin-panel { padding: 32px; }
+.admin-wide  { max-width: 56rem; }
+
+/* Event rows */
+.event-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.event-row-info    { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.event-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.event-row-date    { white-space: nowrap; }
+
+/* Edit row */
+.edit-event-row     { display: flex; flex-direction: column; gap: 8px; }
+.edit-event-fields  { display: flex; gap: 8px; }
+.edit-event-btns    { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Responsive — mobile */
+@media (max-width: 640px) {
+    .admin-wide  { max-width: 100%; }
+    .admin-panel { padding: 16px; }
+
+    /* Event rows stack on mobile */
+    .event-row         { flex-direction: column; align-items: flex-start; }
+    .event-row-actions { width: 100%; justify-content: flex-end; }
+
+    /* Add event form stacks on mobile */
+    .add-event-form              { flex-direction: column; }
+    .add-event-form input,
+    .add-event-form button       { width: 100% !important; }
+
+    /* Edit fields stack on mobile */
+    .edit-event-fields           { flex-direction: column; }
+    .edit-event-fields input     { width: 100% !important; }
+}
