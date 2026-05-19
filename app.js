@@ -87,9 +87,16 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
         return;
     }
 
+    const companyField = document.getElementById('company');
+    const storedCompany = companyField.dataset.storedCompany;
+    // For stored users: keep their existing company; only update if they had none and typed one
+    const companyForRecord = (emailField.dataset.isStoredUser && storedCompany)
+        ? storedCompany
+        : checkin.company;
+
     const { error: personError } = await db.rpc('upsert_person', {
         p_name: checkin.name,
-        p_company: checkin.company,
+        p_company: companyForRecord,
         p_phone: checkin.phone,
         p_email: checkin.email,
         p_last_seen: checkin.timestamp
@@ -514,8 +521,10 @@ function setupNameSearch() {
             item.addEventListener('click', () => {
                 const emailField = document.getElementById('email');
                 const phoneField = document.getElementById('phone');
+                const companyField = document.getElementById('company');
                 nameInput.value = item.dataset.name;
-                document.getElementById('company').value = item.dataset.company;
+                companyField.value = item.dataset.company;
+                companyField.dataset.storedCompany = item.dataset.company;
                 phoneField.value = obfuscatePhone(item.dataset.phone);
                 phoneField.dataset.realPhone = item.dataset.phone;
                 phoneField.dataset.isStoredUser = 'true';
@@ -541,7 +550,9 @@ function setupClearPerson() {
         const emailField = document.getElementById('email');
         const phoneField = document.getElementById('phone');
         document.getElementById('name').value = '';
-        document.getElementById('company').value = '';
+        const companyField = document.getElementById('company');
+        companyField.value = '';
+        delete companyField.dataset.storedCompany;
         phoneField.value = '';
         emailField.value = '';
         emailField.dataset.realEmail = '';
