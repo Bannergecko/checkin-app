@@ -284,6 +284,24 @@ summary::-webkit-details-marker {
 .hover\:bg-red-50:hover    { background-color: #fef2f2; }
 .hover\:bg-indigo-200:hover { background-color: #c7d2fe; }
 
+/* Toast notification */
+#toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    padding: 12px 20px;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    max-width: 320px;
+    text-align: center;
+    white-space: normal;
+}
+
 /* Transitions */
 .transition-colors { transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease; }
 
