@@ -168,8 +168,19 @@ async function getEvents() {
     return data;
 }
 
-async function deleteEvent(eventName) {
-    if (!confirm(`Remove "${eventName}"? This does not delete its check-in records.`)) return;
+function confirmDeleteEvent(i, eventName) {
+    const row = document.getElementById(`event-row-${i}`);
+    row.className = 'px-4 py-3 rounded-lg bg-red-50 border border-red-200';
+    row.innerHTML = `
+        <p class="text-sm text-red-700 mb-3">You are about to delete an event. If any check-ins were made to this event they will also be deleted. Please be sure you have exported this event to CSV if you need to keep the check-in data.</p>
+        <div class="flex gap-2 justify-end">
+            <button onclick="executeDeleteEvent('${eventName}')" class="text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg font-medium">Delete Event</button>
+            <button onclick="loadEventList()" class="text-xs px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
+        </div>`;
+}
+
+async function executeDeleteEvent(eventName) {
+    await db.from('checkins').delete().eq('event', eventName);
     await db.from('events').delete().eq('name', eventName);
     if (activeEventName === eventName) {
         activeEventName = null;
@@ -178,6 +189,7 @@ async function deleteEvent(eventName) {
     }
     await loadEventList();
     await loadExportEventSelect();
+    await updateStats();
 }
 
 async function loadExportEventSelect() {
@@ -231,7 +243,7 @@ async function loadEventList() {
             <div class="event-row-actions flex gap-2">
                 ${!isActive ? `<button onclick="setActiveEvent('${e.name}', '${e.event_date || ''}')" class="text-xs px-3 py-1.5 bg-white border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium">Set Active</button>` : ''}
                 <button onclick="showEditEvent(${i}, '${e.name}', '${e.event_date || ''}')" class="text-xs px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 font-medium">Edit</button>
-                <button onclick="deleteEvent('${e.name}')" class="text-xs px-3 py-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 font-medium">Remove</button>
+                <button onclick="confirmDeleteEvent(${i}, '${e.name}')" class="text-xs px-3 py-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 font-medium">Remove</button>
             </div>
         </div>`;
     }).join('');
