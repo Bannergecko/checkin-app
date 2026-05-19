@@ -218,15 +218,15 @@ async function loadEventList() {
 
     list.innerHTML = events.map((e, i) => {
         const isActive = e.is_active;
-        const dateDisplay = e.event_date ? `<span class="text-xs text-gray-500 ml-2">${formatEventDate(e.event_date)}</span>` : '';
+        const dateDisplay = e.event_date ? `<span class="event-row-date text-xs text-gray-500">${formatEventDate(e.event_date)}</span>` : '';
         return `
-        <div id="event-row-${i}" class="flex items-center justify-between px-4 py-3 rounded-lg ${isActive ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-200'}">
-            <div class="flex items-center gap-3">
+        <div id="event-row-${i}" class="event-row px-4 py-3 rounded-lg ${isActive ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-200'}">
+            <div class="event-row-info flex items-center gap-3">
                 <span class="text-base ${isActive ? 'font-semibold text-indigo-700' : 'text-gray-700'}">${e.name}</span>
                 ${dateDisplay}
                 ${isActive ? '<span class="text-xs font-medium px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">Active</span>' : ''}
             </div>
-            <div class="flex gap-2">
+            <div class="event-row-actions flex gap-2">
                 ${!isActive ? `<button onclick="setActiveEvent('${e.name}', '${e.event_date || ''}')" class="text-xs px-3 py-1.5 bg-white border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium">Set Active</button>` : ''}
                 <button onclick="showEditEvent(${i}, '${e.name}', '${e.event_date || ''}')" class="text-xs px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 font-medium">Edit</button>
                 <button onclick="deleteEvent('${e.name}')" class="text-xs px-3 py-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 font-medium">Remove</button>
@@ -237,12 +237,16 @@ async function loadEventList() {
 
 function showEditEvent(i, name, date) {
     const row = document.getElementById(`event-row-${i}`);
-    row.className = 'flex items-center gap-2 px-4 py-3 rounded-lg bg-white border border-indigo-300';
+    row.className = 'edit-event-row px-4 py-3 rounded-lg bg-white border border-indigo-300';
     row.innerHTML = `
-        <input type="text" id="edit-name-${i}" value="${name}" class="input-sm flex-1 px-3 py-1.5 border border-gray-300 rounded-lg">
-        <input type="date" id="edit-date-${i}" value="${date}" class="input-sm w-auto px-3 py-1.5 border border-gray-300 rounded-lg">
-        <button onclick="saveEventEdit('${name}', ${i})" class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Save</button>
-        <button onclick="loadEventList()" class="text-xs px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>`;
+        <div class="edit-event-fields flex gap-2">
+            <input type="text" id="edit-name-${i}" value="${name}" class="input-sm flex-1 px-3 py-1.5 border border-gray-300 rounded-lg">
+            <input type="date" id="edit-date-${i}" value="${date}" class="input-sm w-auto px-3 py-1.5 border border-gray-300 rounded-lg">
+        </div>
+        <div class="edit-event-btns flex gap-2">
+            <button onclick="saveEventEdit('${name}', ${i})" class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Save</button>
+            <button onclick="loadEventList()" class="text-xs px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
+        </div>`;
 }
 
 async function saveEventEdit(oldName, i) {
@@ -352,7 +356,7 @@ function openAdmin() {
     document.getElementById('checkinCard').classList.add('hidden');
     document.getElementById('adminLoginBtn').classList.add('hidden');
     document.getElementById('adminCard').classList.remove('hidden');
-    document.getElementById('mainContainer').style.maxWidth = '56rem';
+    document.getElementById('mainContainer').classList.add('admin-wide');
     updateStats();
     loadExportEventSelect();
 }
@@ -361,7 +365,7 @@ function closeAdmin() {
     document.getElementById('adminCard').classList.add('hidden');
     document.getElementById('adminLoginBtn').classList.remove('hidden');
     document.getElementById('checkinCard').classList.remove('hidden');
-    document.getElementById('mainContainer').style.maxWidth = '';
+    document.getElementById('mainContainer').classList.remove('admin-wide');
 }
 
 async function logout() {
