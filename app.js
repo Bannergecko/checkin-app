@@ -76,7 +76,7 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
 
     if (error) {
         if (error.code === '23505') {
-            document.getElementById('duplicateError').classList.remove('hidden');
+            document.getElementById('duplicateError')?.classList.remove('hidden');
         } else {
             alert('Check-in failed. Please try again.');
             console.error(error);
@@ -119,7 +119,7 @@ function resetForm() {
     delete phoneField.dataset.isStoredUser;
     document.getElementById('clearPerson').classList.add('hidden');
     document.getElementById('emailError').classList.add('hidden');
-    document.getElementById('duplicateError').classList.add('hidden');
+    document.getElementById('duplicateError')?.classList.add('hidden');
 }
 
 // --- Active event ---
