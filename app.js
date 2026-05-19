@@ -203,6 +203,7 @@ function confirmDeleteEvent(i, eventName) {
         <p class="text-sm text-red-700 mb-3">You are about to delete an event. If any check-ins were made to this event they will also be deleted. Please be sure you have exported this event to CSV if you need to keep the check-in data.</p>
         <div class="flex gap-2 justify-end">
             <button onclick="executeDeleteEvent('${eventName}')" class="text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg font-medium">Delete Event</button>
+            <button onclick="exportAndDeleteEvent('${eventName}')" class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg font-medium">Export and Delete</button>
             <button onclick="loadEventList()" class="text-xs px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
         </div>`;
 }
@@ -218,6 +219,21 @@ async function executeDeleteEvent(eventName) {
     await loadEventList();
     await loadExportEventSelect();
     await updateStats();
+}
+
+async function exportAndDeleteEvent(eventName) {
+    const { data, error } = await db.from('checkins').select('name, phone, email, event, timestamp').eq('event', eventName).order('timestamp');
+    if (!error && data && data.length > 0) {
+        const dateStr = new Date().toISOString().split('T')[0];
+        const headers = ['Name', 'Phone', 'Email', 'Event', 'Date', 'Time'];
+        const rows = data.map(c => {
+            const date = new Date(c.timestamp);
+            return [c.name, formatPhone(c.phone), c.email, c.event, date.toLocaleDateString(), date.toLocaleTimeString()];
+        });
+        const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+        downloadFile(csv, `lathrop-checkins-${sanitizeFilename(eventName)}-${dateStr}.csv`, 'text/csv');
+    }
+    await executeDeleteEvent(eventName);
 }
 
 async function loadExportEventSelect() {
