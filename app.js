@@ -66,6 +66,7 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
 
     const checkin = {
         name: document.getElementById('name').value.trim(),
+        company: document.getElementById('company').value.trim() || null,
         phone,
         email,
         event: activeEventName,
@@ -88,6 +89,7 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
 
     const { error: personError } = await db.rpc('upsert_person', {
         p_name: checkin.name,
+        p_company: checkin.company,
         p_phone: checkin.phone,
         p_email: checkin.email,
         p_last_seen: checkin.timestamp
@@ -96,9 +98,9 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
 
     const idx = cachedPeople.findIndex(p => p.email === checkin.email);
     if (idx >= 0) {
-        cachedPeople[idx] = { ...cachedPeople[idx], name: checkin.name, phone: checkin.phone };
+        cachedPeople[idx] = { ...cachedPeople[idx], name: checkin.name, company: checkin.company, phone: checkin.phone };
     } else {
-        cachedPeople.push({ name: checkin.name, phone: checkin.phone, email: checkin.email });
+        cachedPeople.push({ name: checkin.name, company: checkin.company, phone: checkin.phone, email: checkin.email });
     }
 
     showSuccess();
@@ -222,13 +224,13 @@ async function executeDeleteEvent(eventName) {
 }
 
 async function exportAndDeleteEvent(eventName) {
-    const { data, error } = await db.from('checkins').select('name, phone, email, event, timestamp').eq('event', eventName).order('timestamp');
+    const { data, error } = await db.from('checkins').select('name, company, phone, email, event, timestamp').eq('event', eventName).order('timestamp');
     if (!error && data && data.length > 0) {
         const dateStr = new Date().toISOString().split('T')[0];
-        const headers = ['Name', 'Phone', 'Email', 'Event', 'Date', 'Time'];
+        const headers = ['Name', 'Company', 'Phone', 'Email', 'Event', 'Date', 'Time'];
         const rows = data.map(c => {
             const date = new Date(c.timestamp);
-            return [c.name, formatPhone(c.phone), c.email, c.event, date.toLocaleDateString(), date.toLocaleTimeString()];
+            return [c.name, c.company || '', formatPhone(c.phone), c.email, c.event, date.toLocaleDateString(), date.toLocaleTimeString()];
         });
         const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
         downloadFile(csv, `lathrop-checkins-${sanitizeFilename(eventName)}-${dateStr}.csv`, 'text/csv');
@@ -342,7 +344,7 @@ async function saveEventEdit(oldName, i) {
 // --- People ---
 
 async function fetchPeople() {
-    const { data, error } = await db.from('people').select('name, phone, email');
+    const { data, error } = await db.from('people').select('name, company, phone, email');
     if (!error) cachedPeople = data || [];
 }
 
@@ -387,7 +389,7 @@ async function loadRecentList() {
 
 async function exportCSV() {
     const eventFilter = document.getElementById('exportEvent').value;
-    let query = db.from('checkins').select('name, phone, email, event, timestamp').order('timestamp');
+    let query = db.from('checkins').select('name, company, phone, email, event, timestamp').order('timestamp');
     if (eventFilter) query = query.eq('event', eventFilter);
 
     const { data, error } = await query;
@@ -401,10 +403,10 @@ async function exportCSV() {
 
     Object.entries(checkinsByEvent).forEach(([eventName, eventCheckins]) => {
         const dateStr = new Date().toISOString().split('T')[0];
-        const headers = ['Name', 'Phone', 'Email', 'Event', 'Date', 'Time'];
+        const headers = ['Name', 'Company', 'Phone', 'Email', 'Event', 'Date', 'Time'];
         const rows = eventCheckins.map(c => {
             const date = new Date(c.timestamp);
-            return [c.name, formatPhone(c.phone), c.email, c.event, date.toLocaleDateString(), date.toLocaleTimeString()];
+            return [c.name, c.company || '', formatPhone(c.phone), c.email, c.event, date.toLocaleDateString(), date.toLocaleTimeString()];
         });
         const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
         downloadFile(csv, `lathrop-checkins-${sanitizeFilename(eventName)}-${dateStr}.csv`, 'text/csv');
@@ -500,9 +502,9 @@ function setupNameSearch() {
 
         suggestionsBox.innerHTML = matches.map(p => `
             <div class="suggestion-item px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-0"
-                 data-name="${p.name}" data-phone="${p.phone}" data-email="${p.email}" data-obfuscated="${obfuscateEmail(p.email)}">
+                 data-name="${p.name}" data-company="${p.company || ''}" data-phone="${p.phone}" data-email="${p.email}" data-obfuscated="${obfuscateEmail(p.email)}">
                 <div class="font-medium text-gray-800">${p.name}</div>
-                <div class="text-sm text-gray-500">${obfuscateEmail(p.email)}</div>
+                <div class="text-sm text-gray-500">${p.company ? `${p.company} · ` : ''}${obfuscateEmail(p.email)}</div>
             </div>
         `).join('');
 
@@ -513,6 +515,7 @@ function setupNameSearch() {
                 const emailField = document.getElementById('email');
                 const phoneField = document.getElementById('phone');
                 nameInput.value = item.dataset.name;
+                document.getElementById('company').value = item.dataset.company;
                 phoneField.value = obfuscatePhone(item.dataset.phone);
                 phoneField.dataset.realPhone = item.dataset.phone;
                 phoneField.dataset.isStoredUser = 'true';
@@ -538,6 +541,7 @@ function setupClearPerson() {
         const emailField = document.getElementById('email');
         const phoneField = document.getElementById('phone');
         document.getElementById('name').value = '';
+        document.getElementById('company').value = '';
         phoneField.value = '';
         emailField.value = '';
         emailField.dataset.realEmail = '';
