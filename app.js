@@ -126,8 +126,14 @@ function resetForm() {
 
 async function loadActiveEvent() {
     const { data } = await db.from('events').select('name, event_date').eq('is_active', true).maybeSingle();
-    activeEventName = data?.name || null;
-    activeEventDate = data?.event_date || null;
+    if (data && isDateInPast(data.event_date)) {
+        await db.from('events').update({ is_active: false }).eq('name', data.name);
+        activeEventName = null;
+        activeEventDate = null;
+    } else {
+        activeEventName = data?.name || null;
+        activeEventDate = data?.event_date || null;
+    }
     updateActiveEventDisplay();
 }
 
@@ -146,6 +152,10 @@ function updateActiveEventDisplay() {
 }
 
 async function setActiveEvent(eventName, eventDate) {
+    if (isDateInPast(eventDate)) {
+        alert('This event occurs in the past and therefore cannot be made active.');
+        return;
+    }
     await db.from('events').update({ is_active: false }).not('id', 'is', null);
     await db.from('events').update({ is_active: true }).eq('name', eventName);
     activeEventName = eventName;
@@ -158,6 +168,15 @@ function formatEventDate(dateStr) {
     if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-').map(Number);
     return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function isDateInPast(dateStr) {
+    if (!dateStr) return false;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const eventDate = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return eventDate < today;
 }
 
 // --- Event functions ---
@@ -228,6 +247,15 @@ async function loadEventList() {
     if (events.length === 0) {
         list.innerHTML = '<p class="text-gray-400">No events configured</p>';
         return;
+    }
+
+    // Single event: always keep it active unless its date is in the past
+    if (events.length === 1 && !events[0].is_active && !isDateInPast(events[0].event_date)) {
+        await db.from('events').update({ is_active: true }).eq('name', events[0].name);
+        events[0].is_active = true;
+        activeEventName = events[0].name;
+        activeEventDate = events[0].event_date || null;
+        updateActiveEventDisplay();
     }
 
     list.innerHTML = events.map((e, i) => {
