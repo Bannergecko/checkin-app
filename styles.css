@@ -323,9 +323,12 @@ summary::-webkit-details-marker {
     /* Add event form stacks on mobile */
     .add-event-form              { flex-direction: column; }
     .add-event-form input,
-    .add-event-form button       { width: 100% !important; }
+    .add-event-form button       { width: 100% !important; min-width: 0; }
 
     /* Edit fields stack on mobile */
     .edit-event-fields           { flex-direction: column; }
-    .edit-event-fields input     { width: 100% !important; }
+    .edit-event-fields input     { width: 100% !important; min-width: 0; }
+
+    /* Prevent date inputs from overflowing on mobile */
+    input[type="date"]           { min-width: 0; width: 100%; }
 }
