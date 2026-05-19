@@ -169,9 +169,11 @@ async function getEvents() {
 }
 
 async function deleteEvent(eventName) {
+    if (!confirm(`Remove "${eventName}"? This does not delete its check-in records.`)) return;
     await db.from('events').delete().eq('name', eventName);
     if (activeEventName === eventName) {
         activeEventName = null;
+        activeEventDate = null;
         updateActiveEventDisplay();
     }
     await loadEventList();
