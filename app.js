@@ -32,7 +32,7 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     if (!activeEventName) {
-        alert('No active event. An admin must set one first.');
+        showNotification('No active event. An admin must set one first.');
         return;
     }
 
@@ -53,7 +53,7 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
     if (!phoneField.dataset.isStoredUser) {
         const cleaned = phone.replace(/\D/g, '');
         if (cleaned.length !== 10) {
-            alert('Please enter a valid 10-digit phone number');
+            showNotification('Please enter a valid 10-digit phone number.');
             return;
         }
     }
@@ -78,7 +78,7 @@ document.getElementById('checkinForm').addEventListener('submit', async (e) => {
         if (error.code === '23505') {
             document.getElementById('duplicateError')?.classList.remove('hidden');
         } else {
-            alert('Check-in failed. Please try again.');
+            showNotification('Check-in failed. Please try again.');
             console.error(error);
         }
         submitBtn.disabled = false;
@@ -151,9 +151,18 @@ function updateActiveEventDisplay() {
     }
 }
 
+function showNotification(message, type = 'error') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.style.backgroundColor = type === 'error' ? '#dc2626' : '#1f2937';
+    toast.classList.remove('hidden');
+    clearTimeout(toast._timeout);
+    toast._timeout = setTimeout(() => toast.classList.add('hidden'), 4000);
+}
+
 async function setActiveEvent(eventName, eventDate) {
     if (isDateInPast(eventDate)) {
-        alert('This event occurs in the past and therefore cannot be made active.');
+        showNotification('This event occurs in the past and therefore cannot be made active.');
         return;
     }
     await db.from('events').update({ is_active: false }).not('id', 'is', null);
@@ -230,6 +239,11 @@ async function addEvent() {
     const eventName = input.value.trim();
     const eventDate = dateInput.value || null;
     if (!eventName) return;
+
+    if (isDateInPast(eventDate)) {
+        showNotification('Events cannot be created with a past date.');
+        return;
+    }
 
     const { error } = await db.from('events').insert({ name: eventName, event_date: eventDate });
     if (!error) {
@@ -361,7 +375,7 @@ async function exportCSV() {
     if (eventFilter) query = query.eq('event', eventFilter);
 
     const { data, error } = await query;
-    if (error || !data || data.length === 0) { alert('No data to export'); return; }
+    if (error || !data || data.length === 0) { showNotification('No data to export.', 'info'); return; }
 
     const checkinsByEvent = {};
     data.forEach(c => {
