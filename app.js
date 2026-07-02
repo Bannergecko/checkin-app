@@ -1,4 +1,4 @@
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.5.1';
 console.log(`GLCC Check-In v${APP_VERSION} | Loaded: ${new Date().toLocaleString()}`);
 
 const SUPABASE_URL = 'https://iqloilzpgsgwhctgmikj.supabase.co';
@@ -373,7 +373,7 @@ async function updateStats() {
 async function loadRecentList() {
     const list = document.getElementById('recentList');
     const { data } = await db.from('checkins')
-        .select('name, phone, email, event, timestamp')
+        .select('name, company, phone, email, event, timestamp')
         .order('timestamp', { ascending: false })
         .limit(10);
 
@@ -386,6 +386,7 @@ async function loadRecentList() {
         const date = new Date(c.timestamp);
         return `<div class="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
             <div class="font-medium text-gray-800">${c.name}</div>
+            ${c.company ? `<div class="text-sm text-gray-600 mt-0.5">${c.company}</div>` : ''}
             <div class="text-sm text-gray-500 mt-1">${formatPhone(c.phone)} · ${c.email}</div>
             <div class="text-sm text-gray-400 mt-1">${c.event} · ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</div>
         </div>`;
