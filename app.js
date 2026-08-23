@@ -40,8 +40,10 @@ function applyBranding(profile) {
     if (profile.logo_data) {
         document.getElementById('siteLogo').src = profile.logo_data;
     }
-    document.getElementById('siteHeading').textContent = profile.heading_text || 'Member Check-In';
-    document.getElementById('siteFooter').textContent = profile.footer_text || '';
+    const headingEl = document.getElementById('siteHeading');
+    if (headingEl) headingEl.textContent = profile.heading_text || 'Member Check-In';
+    const footerEl = document.getElementById('siteFooter');
+    if (footerEl) footerEl.textContent = profile.footer_text || '';
 }
 
 async function loadActiveBranding() {
@@ -230,6 +232,7 @@ function setupBrandingForm() {
         document.getElementById('brandPrimary').value = '#c0272d';
         document.getElementById('brandText').value = '#1c2b4a';
         document.getElementById('brandBg').value = '#ffffff';
+        e.target.closest('details')?.removeAttribute('open');
         await loadBrandingList();
     });
 }
