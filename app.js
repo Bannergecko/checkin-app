@@ -9,6 +9,7 @@ let currentSession = null;
 let cachedPeople = [];
 let activeEventName = null;
 let activeEventDate = null;
+let cachedBrandingProfiles = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await db.auth.getSession();
@@ -39,6 +40,7 @@ function applyBranding(profile) {
     if (profile.logo_data) {
         document.getElementById('siteLogo').src = profile.logo_data;
     }
+    document.getElementById('siteHeading').textContent = profile.heading_text || 'Member Check-In';
     document.getElementById('siteFooter').textContent = profile.footer_text || '';
 }
 
@@ -56,30 +58,101 @@ async function getBrandingProfiles() {
 async function loadBrandingList() {
     const list = document.getElementById('brandingList');
     const profiles = await getBrandingProfiles();
+    cachedBrandingProfiles = profiles;
 
     if (profiles.length === 0) {
         list.innerHTML = '<p class="text-gray-400 text-sm">No saved profiles yet</p>';
         return;
     }
 
-    list.innerHTML = profiles.map(p => {
-        const isActive = p.is_active;
-        const thumb = p.logo_data
-            ? `<img src="${p.logo_data}" alt="" class="w-8 h-8" style="object-fit: contain;">`
-            : '<div class="w-8 h-8 bg-gray-100 rounded"></div>';
-        return `
-        <div class="event-row px-4 py-3 rounded-lg ${isActive ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-200'}">
-            <div class="event-row-info flex items-center gap-3">
-                ${thumb}
-                <span class="text-base ${isActive ? 'font-semibold text-indigo-700' : 'text-gray-700'}">${p.name}</span>
-                ${isActive ? '<span class="text-xs font-medium px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">Active</span>' : ''}
+    list.innerHTML = profiles.map((p, i) => renderBrandingRow(p, i)).join('');
+}
+
+function renderBrandingRow(p, i) {
+    const isActive = p.is_active;
+    const thumb = p.logo_data
+        ? `<img src="${p.logo_data}" alt="" class="w-8 h-8" style="object-fit: contain;">`
+        : '<div class="w-8 h-8 bg-gray-100 rounded"></div>';
+    return `
+    <div id="branding-row-${i}" class="event-row px-4 py-3 rounded-lg ${isActive ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-200'}">
+        <div class="event-row-info flex items-center gap-3">
+            ${thumb}
+            <span class="text-base ${isActive ? 'font-semibold text-indigo-700' : 'text-gray-700'}">${p.name}</span>
+            ${isActive ? '<span class="text-xs font-medium px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">Active</span>' : ''}
+        </div>
+        <div class="event-row-actions flex gap-2">
+            ${!isActive ? `<button onclick="setActiveBranding(${p.id})" class="text-xs px-3 py-1.5 bg-white border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium">Set Active</button>` : ''}
+            <button onclick="showEditBranding(${i})" class="text-xs px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 font-medium">Edit</button>
+            <button onclick="deleteBranding(${p.id}, ${isActive})" class="text-xs px-3 py-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 font-medium">Remove</button>
+        </div>
+    </div>`;
+}
+
+function showEditBranding(i) {
+    const p = cachedBrandingProfiles[i];
+    const row = document.getElementById(`branding-row-${i}`);
+    row.className = 'edit-event-row px-4 py-3 rounded-lg bg-white border border-indigo-300';
+    row.innerHTML = `
+        <input type="text" id="edit-brand-name-${i}" value="${escapeAttr(p.name)}" placeholder="Profile name"
+            class="input-sm w-full px-3 py-1.5 border border-gray-300 rounded-lg">
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">Replace logo (optional)</label>
+            <input type="file" id="edit-brand-logo-${i}" accept="image/*" class="input-sm w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5">
+        </div>
+        <div class="flex gap-3">
+            <div class="flex-1">
+                <label class="block text-xs text-gray-500 mb-1">Accent</label>
+                <input type="color" id="edit-brand-primary-${i}" value="${p.primary_color || '#c0272d'}" class="w-full h-9 border border-gray-300 rounded-lg">
             </div>
-            <div class="event-row-actions flex gap-2">
-                ${!isActive ? `<button onclick="setActiveBranding(${p.id})" class="text-xs px-3 py-1.5 bg-white border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium">Set Active</button>` : ''}
-                <button onclick="deleteBranding(${p.id}, ${isActive})" class="text-xs px-3 py-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 font-medium">Remove</button>
+            <div class="flex-1">
+                <label class="block text-xs text-gray-500 mb-1">Heading color</label>
+                <input type="color" id="edit-brand-text-${i}" value="${p.text_color || '#1c2b4a'}" class="w-full h-9 border border-gray-300 rounded-lg">
             </div>
+            <div class="flex-1">
+                <label class="block text-xs text-gray-500 mb-1">Background</label>
+                <input type="color" id="edit-brand-bg-${i}" value="${p.background_color || '#ffffff'}" class="w-full h-9 border border-gray-300 rounded-lg">
+            </div>
+        </div>
+        <input type="text" id="edit-brand-heading-${i}" value="${escapeAttr(p.heading_text || '')}" placeholder="Heading text"
+            class="input-sm w-full px-3 py-1.5 border border-gray-300 rounded-lg">
+        <input type="text" id="edit-brand-footer-${i}" value="${escapeAttr(p.footer_text || '')}" placeholder="Footer text"
+            class="input-sm w-full px-3 py-1.5 border border-gray-300 rounded-lg">
+        <div class="edit-event-btns flex gap-2">
+            <button onclick="saveBrandingEdit(${i})" class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">Save</button>
+            <button onclick="loadBrandingList()" class="text-xs px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>
         </div>`;
-    }).join('');
+}
+
+async function saveBrandingEdit(i) {
+    const p = cachedBrandingProfiles[i];
+    const logoFile = document.getElementById(`edit-brand-logo-${i}`).files[0];
+
+    if (logoFile && logoFile.size > 800 * 1024) {
+        showNotification('Logo file is too large. Please use an image under 800KB.');
+        return;
+    }
+
+    const updates = {
+        name: document.getElementById(`edit-brand-name-${i}`).value.trim(),
+        primary_color: document.getElementById(`edit-brand-primary-${i}`).value,
+        text_color: document.getElementById(`edit-brand-text-${i}`).value,
+        background_color: document.getElementById(`edit-brand-bg-${i}`).value,
+        heading_text: document.getElementById(`edit-brand-heading-${i}`).value.trim(),
+        footer_text: document.getElementById(`edit-brand-footer-${i}`).value.trim()
+    };
+    if (!updates.name) return;
+
+    if (logoFile) updates.logo_data = await fileToDataUrl(logoFile);
+
+    const { data, error } = await db.from('branding_profiles').update(updates).eq('id', p.id).select().maybeSingle();
+    if (error) { console.error('Branding update error:', error); showNotification('Failed to save changes.'); return; }
+
+    if (p.is_active && data) applyBranding(data);
+    await loadBrandingList();
+}
+
+function escapeAttr(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
 async function setActiveBranding(id) {
@@ -116,6 +189,7 @@ function setupBrandingForm() {
         const primaryColor = document.getElementById('brandPrimary').value;
         const textColor = document.getElementById('brandText').value;
         const backgroundColor = document.getElementById('brandBg').value;
+        const headingText = document.getElementById('brandHeading').value.trim();
         const footerText = document.getElementById('brandFooter').value.trim();
 
         if (!name) return;
@@ -138,6 +212,7 @@ function setupBrandingForm() {
             primary_color: primaryColor,
             text_color: textColor,
             background_color: backgroundColor,
+            heading_text: headingText,
             footer_text: footerText
         });
 
