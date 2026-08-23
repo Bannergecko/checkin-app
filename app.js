@@ -1,4 +1,4 @@
-const APP_VERSION = '2.5.1';
+const APP_VERSION = '2.6.0';
 console.log(`GLCC Check-In v${APP_VERSION} | Loaded: ${new Date().toLocaleString()}`);
 
 const SUPABASE_URL = 'https://iqloilzpgsgwhctgmikj.supabase.co';
@@ -19,13 +19,145 @@ document.addEventListener('DOMContentLoaded', async () => {
     await fetchPeople();
     await loadActiveEvent();
     await loadExportEventSelect();
+    await loadActiveBranding();
     setupNameSearch();
     setupClearPerson();
+    setupBrandingForm();
 
     if (currentSession) {
         openAdmin();
     }
 });
+
+// --- Branding / Profiles ---
+
+function applyBranding(profile) {
+    const root = document.documentElement.style;
+    root.setProperty('--primary-color', profile.primary_color || '#c0272d');
+    root.setProperty('--text-color', profile.text_color || '#1c2b4a');
+    root.setProperty('--bg-color', profile.background_color || '#ffffff');
+    if (profile.logo_data) {
+        document.getElementById('siteLogo').src = profile.logo_data;
+    }
+    document.getElementById('siteFooter').textContent = profile.footer_text || '';
+}
+
+async function loadActiveBranding() {
+    const { data, error } = await db.from('branding_profiles').select('*').eq('is_active', true).maybeSingle();
+    if (!error && data) applyBranding(data);
+}
+
+async function getBrandingProfiles() {
+    const { data, error } = await db.from('branding_profiles').select('*').order('created_at');
+    if (error) { console.error('getBrandingProfiles:', error); return []; }
+    return data;
+}
+
+async function loadBrandingList() {
+    const list = document.getElementById('brandingList');
+    const profiles = await getBrandingProfiles();
+
+    if (profiles.length === 0) {
+        list.innerHTML = '<p class="text-gray-400 text-sm">No saved profiles yet</p>';
+        return;
+    }
+
+    list.innerHTML = profiles.map(p => {
+        const isActive = p.is_active;
+        const thumb = p.logo_data
+            ? `<img src="${p.logo_data}" alt="" class="w-8 h-8" style="object-fit: contain;">`
+            : '<div class="w-8 h-8 bg-gray-100 rounded"></div>';
+        return `
+        <div class="event-row px-4 py-3 rounded-lg ${isActive ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-200'}">
+            <div class="event-row-info flex items-center gap-3">
+                ${thumb}
+                <span class="text-base ${isActive ? 'font-semibold text-indigo-700' : 'text-gray-700'}">${p.name}</span>
+                ${isActive ? '<span class="text-xs font-medium px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">Active</span>' : ''}
+            </div>
+            <div class="event-row-actions flex gap-2">
+                ${!isActive ? `<button onclick="setActiveBranding(${p.id})" class="text-xs px-3 py-1.5 bg-white border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium">Set Active</button>` : ''}
+                <button onclick="deleteBranding(${p.id}, ${isActive})" class="text-xs px-3 py-1.5 bg-white border border-red-200 text-red-500 rounded-lg hover:bg-red-50 font-medium">Remove</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function setActiveBranding(id) {
+    await db.from('branding_profiles').update({ is_active: false }).not('id', 'is', null);
+    const { data, error } = await db.from('branding_profiles').update({ is_active: true }).eq('id', id).select().maybeSingle();
+    if (!error && data) applyBranding(data);
+    await loadBrandingList();
+}
+
+async function deleteBranding(id, wasActive) {
+    await db.from('branding_profiles').delete().eq('id', id);
+    if (wasActive) await loadActiveBranding();
+    await loadBrandingList();
+}
+
+function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function setupBrandingForm() {
+    document.getElementById('brandingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const errorEl = document.getElementById('brandingError');
+        errorEl.classList.add('hidden');
+
+        const name = document.getElementById('brandName').value.trim();
+        const logoFile = document.getElementById('brandLogo').files[0];
+        const primaryColor = document.getElementById('brandPrimary').value;
+        const textColor = document.getElementById('brandText').value;
+        const backgroundColor = document.getElementById('brandBg').value;
+        const footerText = document.getElementById('brandFooter').value.trim();
+
+        if (!name) return;
+
+        if (logoFile && logoFile.size > 800 * 1024) {
+            errorEl.textContent = 'Logo file is too large. Please use an image under 800KB.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        const logoData = logoFile ? await fileToDataUrl(logoFile) : null;
+
+        const { error } = await db.from('branding_profiles').insert({
+            name,
+            logo_data: logoData,
+            primary_color: primaryColor,
+            text_color: textColor,
+            background_color: backgroundColor,
+            footer_text: footerText
+        });
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Profile';
+
+        if (error) {
+            errorEl.textContent = 'Failed to save profile. Please try again.';
+            errorEl.classList.remove('hidden');
+            console.error('Branding save error:', error);
+            return;
+        }
+
+        e.target.reset();
+        document.getElementById('brandPrimary').value = '#c0272d';
+        document.getElementById('brandText').value = '#1c2b4a';
+        document.getElementById('brandBg').value = '#ffffff';
+        await loadBrandingList();
+    });
+}
 
 // Form submission
 document.getElementById('checkinForm').addEventListener('submit', async (e) => {
@@ -441,6 +573,7 @@ function openAdmin() {
     document.getElementById('mainContainer').classList.add('admin-wide');
     updateStats();
     loadExportEventSelect();
+    loadBrandingList();
 }
 
 function closeAdmin() {
