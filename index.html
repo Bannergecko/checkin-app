@@ -15,11 +15,11 @@
         }
     </style>
 </head>
-<body class="min-h-screen" style="background-color: #ffffff;">
+<body class="min-h-screen">
     <div id="mainContainer" class="max-w-lg mx-auto px-4 py-8">
         <!-- Header -->
         <header class="text-center mb-8">
-            <img src="lvfl-logo.png" alt="Greater Lathrop Chamber of Commerce" class="h-40 mx-auto mb-3">
+            <img id="siteLogo" src="lvfl-logo.png" alt="Site logo" class="h-40 mx-auto mb-3">
             <p class="text-black text-2xl font-bold">Member Check-In</p>
         </header>
 
@@ -66,7 +66,7 @@
                 <p id="duplicateError" class="hidden text-red-600 text-sm">You are already checked into this event.</p>
                 <button type="submit"
                     class="w-full text-white py-4 rounded-lg font-semibold text-lg transition-colors"
-                    style="background-color: #c0272d;">
+                    style="background-color: var(--primary-color);">
                     Check In
                 </button>
             </form>
@@ -88,6 +88,54 @@
         <!-- Admin Section (shown when logged in) -->
         <div id="adminCard" class="hidden bg-white rounded-2xl shadow-lg">
             <div class="admin-panel space-y-6">
+
+                <!-- Branding / Profiles -->
+                <div>
+                    <h3 class="font-semibold text-gray-800 text-lg mb-3">Branding</h3>
+                    <div id="brandingList" class="space-y-2 mb-4"></div>
+
+                    <details>
+                        <summary class="cursor-pointer text-indigo-600 hover:text-indigo-700 text-sm mb-3">+ Create new profile</summary>
+                        <form id="brandingForm" class="space-y-3 mt-3">
+                            <div>
+                                <label for="brandName" class="block text-sm font-medium text-gray-700 mb-1">Profile name</label>
+                                <input type="text" id="brandName" required placeholder="e.g. Fall Campaign"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label for="brandLogo" class="block text-sm font-medium text-gray-700 mb-1">Logo image</label>
+                                <input type="file" id="brandLogo" accept="image/*"
+                                    class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2">
+                                <p class="text-xs text-gray-400 mt-1">PNG or JPG, under 500KB recommended.</p>
+                            </div>
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <label for="brandPrimary" class="block text-sm font-medium text-gray-700 mb-1">Accent color</label>
+                                    <input type="color" id="brandPrimary" value="#c0272d" class="w-full h-10 border border-gray-300 rounded-lg">
+                                </div>
+                                <div class="flex-1">
+                                    <label for="brandText" class="block text-sm font-medium text-gray-700 mb-1">Heading color</label>
+                                    <input type="color" id="brandText" value="#1c2b4a" class="w-full h-10 border border-gray-300 rounded-lg">
+                                </div>
+                                <div class="flex-1">
+                                    <label for="brandBg" class="block text-sm font-medium text-gray-700 mb-1">Background color</label>
+                                    <input type="color" id="brandBg" value="#ffffff" class="w-full h-10 border border-gray-300 rounded-lg">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="brandFooter" class="block text-sm font-medium text-gray-700 mb-1">Footer text</label>
+                                <input type="text" id="brandFooter" placeholder="e.g. Greater Lathrop Chamber of Commerce"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            <p id="brandingError" class="hidden text-red-600 text-sm"></p>
+                            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+                                Save Profile
+                            </button>
+                        </form>
+                    </details>
+                </div>
+
+                <hr class="border-gray-200">
 
                 <!-- Event Management -->
                 <div>
@@ -166,7 +214,7 @@
                     <div class="flex gap-2">
                         <button type="submit"
                             class="flex-1 text-white py-3 rounded-lg font-semibold transition-colors"
-                            style="background-color: #c0272d;">
+                            style="background-color: var(--primary-color);">
                             Login
                         </button>
                         <button type="button" onclick="closeLoginModal()"
@@ -179,7 +227,7 @@
         </div>
 
         <!-- Footer -->
-        <footer class="text-center mt-8 text-sm text-gray-500">
+        <footer id="siteFooter" class="text-center mt-8 text-sm text-gray-500">
             Greater Lathrop Chamber of Commerce
         </footer>
     </div>
