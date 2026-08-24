@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupNameSearch();
     setupClearPerson();
     setupBrandingForm();
+    setupExportEventFilter();
 
     if (currentSession) {
         openAdmin();
@@ -458,6 +459,7 @@ async function exportAndDeleteEvent(eventName) {
 async function loadExportEventSelect() {
     const select = document.getElementById('exportEvent');
     const events = await getEvents();
+    const previousValue = select.value;
 
     select.innerHTML = '<option value="">All Events</option>';
     events.forEach(e => {
@@ -466,6 +468,12 @@ async function loadExportEventSelect() {
         option.textContent = e.name;
         select.appendChild(option);
     });
+
+    if (events.some(e => e.name === previousValue)) select.value = previousValue;
+}
+
+function setupExportEventFilter() {
+    document.getElementById('exportEvent').addEventListener('change', updateStats);
 }
 
 async function addEvent() {
@@ -572,20 +580,33 @@ function getPeople() {
 // --- Stats and recent list ---
 
 async function updateStats() {
-    const { count: checkinCount } = await db.from('checkins').select('*', { count: 'exact', head: true });
-    const { count: peopleCount } = await db.from('people').select('*', { count: 'exact', head: true });
-    document.getElementById('recordCount').textContent =
-        `Total check-ins: ${checkinCount ?? 0} | People in database: ${peopleCount ?? 0}`;
-    await loadRecentList();
+    const eventFilter = document.getElementById('exportEvent').value;
+
+    let checkinQuery = db.from('checkins').select('*', { count: 'exact', head: true });
+    if (eventFilter) checkinQuery = checkinQuery.eq('event', eventFilter);
+    const { count: checkinCount } = await checkinQuery;
+
+    if (eventFilter) {
+        document.getElementById('recordCount').textContent =
+            `Check-ins for ${eventFilter}: ${checkinCount ?? 0}`;
+    } else {
+        const { count: peopleCount } = await db.from('people').select('*', { count: 'exact', head: true });
+        document.getElementById('recordCount').textContent =
+            `Total check-ins: ${checkinCount ?? 0} | People in database: ${peopleCount ?? 0}`;
+    }
+
+    await loadRecentList(eventFilter);
     await loadEventList();
 }
 
-async function loadRecentList() {
+async function loadRecentList(eventFilter = '') {
     const list = document.getElementById('recentList');
-    const { data } = await db.from('checkins')
+    let query = db.from('checkins')
         .select('name, company, phone, email, event, timestamp')
         .order('timestamp', { ascending: false })
         .limit(10);
+    if (eventFilter) query = query.eq('event', eventFilter);
+    const { data } = await query;
 
     if (!data || data.length === 0) {
         list.innerHTML = '<p class="text-gray-400">No check-ins yet</p>';
